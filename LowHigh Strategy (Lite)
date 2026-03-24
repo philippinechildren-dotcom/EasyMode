@@ -1,0 +1,50 @@
+//@version=6
+strategy("EasyMode LowHigh (Lite)", overlay=true,
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=100,
+     process_orders_on_close=true)
+
+// ----------------------------------------------------------------
+// EasyMode Trading Series - LoHi (Lite Version)
+//
+// This is a simplified version of the EasyMode LowHigh Mean Reversion System.
+//
+// Designed for end-of-day trading on SPY and QQQ using a very
+// simple, rules-based approach.
+//
+// The goal is to identify short-term weakness for entries and
+// strength for exits — without indicators or complex setups.
+//
+// The complete system — including full rules, performance data,
+// and variations — is explained in the EasyMode Trading book series.
+//
+// ⚠️ For end-of-day use only
+// ⚠️ Educational purposes only
+// ----------------------------------------------------------------
+
+// === Inputs (simplified naming) ===
+xDays = input.int(3, title="Low Lookback", minval=1)
+yDays = input.int(1, title="High Lookback", minval=1)
+
+// === Lookback calculations ===
+lowestLow   = ta.lowest(low[1], xDays)
+highestHigh = ta.highest(high[1], yDays)
+
+// === Conditions (core idea shown, not “fully taught”) ===
+buyCondition  = close < lowestLow
+exitCondition = close > highestHigh
+
+// === Orders ===
+if buyCondition
+    strategy.entry("Long", strategy.long)
+
+if exitCondition
+    strategy.close("Long")
+
+// === Minimal Visual Feedback ===
+plotshape(buyCondition, title="Buy", location=location.belowbar,
+     color=color.green, style=shape.triangleup, size=size.small)
+
+plotshape(exitCondition, title="Exit", location=location.abovebar,
+     color=color.red, style=shape.triangledown, size=size.small)
