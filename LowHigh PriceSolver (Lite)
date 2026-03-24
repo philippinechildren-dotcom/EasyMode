@@ -4,7 +4,7 @@ indicator("EasyMode LowHigh PriceSolver (Lite)", overlay=true)
 // ----------------------------------------------------------------
 // EasyMode Trading Series - LowHigh PriceSolver (Lite Version)
 //
-// This is a simplified version of the EasyMode LowHigh PriceSolver system
+// This is a simplified version of the EasyMode LowHigh PriceSolver
 // designed for end-of-day trading on SPY and QQQ.
 //
 // The goal is to highlight potential reversal areas using a
