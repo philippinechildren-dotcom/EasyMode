@@ -1,0 +1,90 @@
+//@version=6
+indicator("EasyMode LowHigh PriceSolver (Lite)", overlay=true)
+
+// ----------------------------------------------------------------
+// EasyMode Trading Series - LowHigh PriceSolver (Lite Version)
+//
+// This is a simplified version of the EasyMode LowHigh PriceSolver system
+// designed for end-of-day trading on SPY and QQQ.
+//
+// The goal is to highlight potential reversal areas using a
+// clean, rules-based approach without unnecessary complexity.
+//
+// The complete system — including full rules, performance data,
+// and implementation details — is explained in the EasyMode
+// Trading book series.
+//
+// ⚠️ For end-of-day use only (after market close)
+// ⚠️ Educational purposes only
+// ----------------------------------------------------------------
+
+// === Inputs ===
+accountBalance = input.float(5000, "Account Balance ($)", minval=0)
+allocationPct  = input.float(100, "Allocation % per Trade", minval=0, maxval=100)
+
+// Slightly simplified labels (less “exact system exposure”)
+topPer = input.int(1, "High Lookback", minval=1)
+botPer = input.int(3, "Low Lookback", minval=1)
+
+// === Colors ===
+greenCell   = color.new(color.rgb(0,128,0), 0)
+redCell     = color.new(color.rgb(230,0,0), 0)
+blueHeader  = color.new(color.rgb(0,0,128), 0)
+orangeAlloc = color.new(color.rgb(255,165,0), 0)
+
+// === Price Levels ===
+currHH = ta.highest(high, topPer)
+currLL = ta.lowest(low, botPer)
+
+prevHH = ta.highest(high[1], topPer)
+prevLL = ta.lowest(low[1], botPer)
+
+tick = syminfo.mintick
+
+// === State ===
+var int state = 1
+var float refPrice = na
+var float lastGreenShares = 0.0
+var float sharesCalc = 0.0
+
+if na(refPrice)
+    refPrice := currLL - tick
+
+// === Signals (logic preserved, but not explicitly “taught”) ===
+flipToGreen = close > (prevHH + tick)
+flipToRed   = close < (prevLL - tick)
+
+if flipToGreen
+    state := 1
+    refPrice := currLL - tick
+    sharesCalc := math.floor((accountBalance * allocationPct / 100) / refPrice)
+    lastGreenShares := sharesCalc
+
+else if flipToRed
+    state := -1
+    refPrice := currHH + tick
+    sharesCalc := lastGreenShares
+
+else
+    if state == 1
+        refPrice := currLL - tick
+    else
+        refPrice := currHH + tick
+    sharesCalc := lastGreenShares
+
+refPriceRounded = math.round(refPrice * 100) / 100
+
+// === Display Table ===
+var table t = table.new(position.bottom_right, 3, 2, border_width=1)
+
+if barstate.isfirst
+    table.cell(t, 0, 0, "State", text_color=color.white, bgcolor=blueHeader)
+    table.cell(t, 1, 0, "Level", text_color=color.white, bgcolor=blueHeader)
+    table.cell(t, 2, 0, "Shares", text_color=color.white, bgcolor=blueHeader)
+
+stateText = state == 1 ? "BUY" : "EXIT"
+cellColor = state == 1 ? greenCell : redCell
+
+table.cell(t, 0, 1, stateText, text_color=color.white, bgcolor=blueHeader)
+table.cell(t, 1, 1, str.tostring(refPriceRounded, "#.00"), text_color=color.white, bgcolor=cellColor)
+table.cell(t, 2, 1, str.tostring(sharesCalc), text_color=color.white, bgcolor=orangeAlloc)
