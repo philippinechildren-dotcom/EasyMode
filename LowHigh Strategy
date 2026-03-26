@@ -1,14 +1,14 @@
 //@version=6
-strategy("EasyMode LowHigh (Lite)", overlay=true,
+strategy("EasyMode LowHigh™", overlay=true,
      initial_capital=100000,
      default_qty_type=strategy.percent_of_equity,
      default_qty_value=100,
      process_orders_on_close=true)
 
 // ----------------------------------------------------------------
-// EasyMode Trading Series - LoHi (Lite Version)
+// EasyMode Trading Series - LowHigh Mean Reversion System
 //
-// This is a simplified version of the EasyMode LowHigh Mean Reversion System.
+// This is a full version of the EasyMode LowHigh™ Mean Reversion System.
 //
 // Designed for end-of-day trading on SPY and QQQ using a very
 // simple, rules-based approach.
@@ -17,7 +17,7 @@ strategy("EasyMode LowHigh (Lite)", overlay=true,
 // strength for exits — without indicators or complex setups.
 //
 // The complete system — including full rules, performance data,
-// and variations — is explained in the EasyMode Trading book series.
+// and variations — is explained in the EasyMode Trading™ book series.
 //
 // ⚠️ For end-of-day use only
 // ⚠️ Educational purposes only
