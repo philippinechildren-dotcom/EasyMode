@@ -1,0 +1,106 @@
+// ─────────────
+// METRICS CORE
+// ─────────────
+
+// This display consists of the metrics used for the EasyMode
+// Trading systems. Simply copy and paste the code to the bottom
+// of the Strategy codes to see the CAGR, Max eod Drawdowns,
+// Ulcer Index, UPI, and Kelly %. Do not use this for the Price
+// Solver or UlcerShield scripts.
+
+// More information about the EasyMode Trading systems can be found
+// on Amazon Kindle.
+
+// Colors
+g() => color.rgb(120,255,120)
+r() => color.rgb(255,120,120)
+b() => color.rgb(120,180,255)
+y() => color.rgb(255,255,120)
+o() => color.rgb(255,180,0)
+
+// Start Equity & Time
+var float startEquity = na
+var int   startTime   = na
+
+if na(startEquity)
+    startEquity := strategy.equity
+if na(startTime)
+    startTime := time
+
+// === Drawdown + Ulcer Index ===
+var float peakEquity = strategy.equity
+var float maxDD      = 0.0
+var float ulcerSum   = 0.0
+var int   ulcerCount = 0
+
+peakEquity := math.max(peakEquity, strategy.equity)
+ddPct = (peakEquity - strategy.equity) / peakEquity * 100
+maxDD := math.max(maxDD, ddPct / 100)
+
+ulcerSum   += ddPct * ddPct
+ulcerCount += 1
+ulcerIndex = math.sqrt(ulcerSum / ulcerCount)
+
+// === CAGR ===
+years = (time - startTime) / (1000*60*60*24*365.25)
+cagr = years > 0 ? math.pow(strategy.equity/startEquity, 1/years)-1 : na
+
+// === UPI ===
+ulcerRatio = ulcerIndex > 0 ? (cagr * 100) / ulcerIndex : na
+
+// === Kelly % (from closed trades) ===
+var int lastClosedTrades = 0
+var float optKelly = na
+
+if strategy.closedtrades > lastClosedTrades
+    tradeCount = strategy.closedtrades
+    
+    winTrades  = 0
+    lossTrades = 0
+    totalWin   = 0.0
+    totalLoss  = 0.0
+
+    for i = 0 to tradeCount - 1
+        tradePnl = strategy.closedtrades.profit(i)
+        if tradePnl > 0
+            totalWin += tradePnl
+            winTrades += 1
+        else
+            totalLoss += math.abs(tradePnl)
+            lossTrades += 1
+
+    if winTrades > 0 and lossTrades > 0
+        avgWin  = totalWin / winTrades
+        avgLoss = totalLoss / lossTrades
+        w = winTrades / (winTrades + lossTrades)
+        r = avgWin / avgLoss
+        optKelly := w - (1 - w) / r
+
+    lastClosedTrades := tradeCount
+
+
+// ─────────────
+// TABLE
+// ─────────────
+
+var table t = table.new(position.top_right, 2, 5, frame_color=color.gray, frame_width=2, bgcolor=color.black)
+
+// CAGR
+table.cell(t,0,0,"CAGR",text_color=b())
+table.cell(t,1,0,str.tostring(cagr*100,"#.##")+"%",text_color=b())
+
+// Max DD
+table.cell(t,0,1,"Max DD",text_color=r())
+table.cell(t,1,1,str.tostring(maxDD*100,"#.##")+"%",text_color=r())
+
+// Ulcer Index
+table.cell(t,0,2,"Ulcer Index",text_color=r())
+table.cell(t,1,2,str.tostring(ulcerIndex,"#.##"),text_color=r())
+
+// UPI
+table.cell(t,0,3,"UPI",text_color=y())
+table.cell(t,1,3,not na(ulcerRatio)?str.tostring(ulcerRatio,"#.##"):"-",text_color=y())
+
+// Kelly %
+table.cell(t,0,4,"Kelly %",text_color=o())
+table.cell(t,1,4,not na(optKelly)?str.tostring(optKelly*100,"#.##")+"%":"-",text_color=o())
