@@ -1,0 +1,100 @@
+//@version=6
+indicator("EasyMode RSI PriceSolver™", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ----------------------------------------------------------------
+// EasyMode Trading Series - RSI PriceSolver™
+//
+// This is a working version of the EasyMode RSI PriceSolver™ 
+// designed for end-of-day trading on QQQ.
+//
+// The goal is to highlight potential reversal areas using a
+// clean, rules-based approach without unnecessary complexity.
+//
+// The complete system — including full rules, performance data,
+// and implementation details — is explained in the EasyMode
+// Trading book series available on Amazon Kindle.
+//
+// ⚠️ For end-of-day use only (after market close)
+// ⚠️ Educational purposes only
+// ----------------------------------------------------------------
+
+// === Allocation Inputs ===
+accountBalance = input.float(5000, "Account Balance ($)", minval=0)
+allocationPct  = input.float(100, "Allocation % per Trade", minval=0, maxval=100)
+
+// === Single RSI Length and Target ===
+rsiLength = input.int(2, "RSI Length", minval=1)
+rsiTarget = input.float(30, "RSI Target", minval=1, maxval=99)
+
+// === Colors ===
+greenCell   = color.new(color.rgb(0,128,0), 0)
+redCell     = color.new(color.rgb(230,0,0), 0)
+blueExact   = color.new(color.rgb(0,0,255), 0)
+blueHeader  = color.new(color.rgb(0,0,128), 0)
+orangeAlloc = color.new(color.rgb(255,165,0), 0)
+
+// === Persistent averages for the single RSI ===
+var float avgGain = na
+var float avgLoss = na
+
+// === Persistent last green shares ===
+var lastGreenShares = 0
+
+// === Flattened RSI PriceSolver (no function call) ===
+change = close - close[1]
+gain   = math.max(change, 0)
+loss   = math.max(-change, 0)
+
+// Update averages (Wilder's smoothing)
+newAvgGain = na(avgGain) ? gain : (avgGain * (rsiLength - 1) + gain) / rsiLength
+newAvgLoss = na(avgLoss) ? loss : (avgLoss * (rsiLength - 1) + loss) / rsiLength
+
+curRSI = 100 * newAvgGain / (newAvgGain + newAvgLoss)
+
+// Compute next-close projection exactly as before
+targetRS = rsiTarget / (100 - rsiTarget)
+delta = 0.0
+if rsiTarget > curRSI
+    delta := targetRS * newAvgLoss * (rsiLength - 1) - newAvgGain * (rsiLength - 1)
+else
+    delta := newAvgLoss * (rsiLength - 1) - ((100 - rsiTarget)/rsiTarget) * newAvgGain * (rsiLength - 1)
+
+projTemp = close + delta
+
+// Update persistent averages
+avgGain := newAvgGain
+avgLoss := newAvgLoss
+
+// Round projection like original
+proj = curRSI > rsiTarget ? math.floor(projTemp*100)/100 : math.ceil(projTemp*100)/100
+
+// === Allocation $ ===
+allocationAmount = math.round(accountBalance * allocationPct / 100)
+
+// === Create table ===
+var table rsiTable = table.new(position.bottom_right, 3, 2, border_width=1)
+
+// Fill headers once
+if barstate.isfirst
+    table.cell(rsiTable, 0, 0, "RSI", text_color=color.white, bgcolor=blueHeader)
+    table.cell(rsiTable, 1, 0, "Next Close", text_color=color.white, bgcolor=blueHeader)
+    table.cell(rsiTable, 2, 0, "Shares", text_color=color.white, bgcolor=blueHeader)
+
+// === Fill table values ===
+cellColor = curRSI > rsiTarget ? greenCell : curRSI < rsiTarget ? redCell : blueExact
+sharesCalc = math.floor(allocationAmount / proj)
+
+// Only update last green shares
+if curRSI > rsiTarget
+    lastGreenShares := sharesCalc
+
+// Use last green value even if current signal is red
+sharesText = str.tostring(lastGreenShares)
+
+// Determine bottom-left cell text dynamically
+cellText = curRSI > rsiTarget ? "Buy" : curRSI < rsiTarget ? "Exit" : "Neutral"
+
+// Update table cells
+table.cell(rsiTable, 0, 1, cellText, text_color=color.white, bgcolor=blueHeader)
+table.cell(rsiTable, 1, 1, str.tostring(proj), text_color=color.white, bgcolor=cellColor)
+table.cell(rsiTable, 2, 1, sharesText, text_color=color.white, bgcolor=orangeAlloc)
