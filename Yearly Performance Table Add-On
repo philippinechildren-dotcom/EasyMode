@@ -3,11 +3,11 @@
 // ─────────────────────────────
 
 // This display consists of the yearly performance for the EasyMode
-// Trading systems. Simply copy and paste the code to the bottom
+// Trading™ systems. Simply copy and paste the code to the bottom
 // of the Strategy codes to see the yearly returns and max drawdowns.
-// Do not use this for the PriceSolver or UlcerShield scripts.
+// Do not use this for the PriceSolver™ or UlcerShield™ scripts.
 
-// More information about the EasyMode Trading systems can be found
+// More information about the EasyMode Trading™ systems can be found
 // on Amazon Kindle.
 
 curYear = year(time)
