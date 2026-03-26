@@ -1,0 +1,93 @@
+// ─────────────────────────────
+// YEARLY RETURN + MAX DD LOGIC
+// ─────────────────────────────
+
+// This display consists of the yearly performance for the EasyMode
+// Trading systems. Simply copy and paste the code to the bottom
+// of the Strategy codes to see the yearly returns and max drawdowns.
+// Do not use this for the PriceSolver or UlcerShield scripts.
+
+// More information about the EasyMode Trading systems can be found
+// on Amazon Kindle.
+
+curYear = year(time)
+var int lastYear = curYear
+
+var array<int>   years      = array.new_int()
+var array<float> returns   = array.new_float()
+var array<float> drawdowns = array.new_float()
+
+var float yearStartEquity = strategy.equity
+var float yearPeakEquity  = strategy.equity
+var float yearMaxDD       = 0.0
+
+yearPeakEquity := math.max(yearPeakEquity, strategy.equity)
+dd = (yearPeakEquity - strategy.equity) / yearPeakEquity
+yearMaxDD := math.max(yearMaxDD, dd)
+
+if curYear != lastYear
+    yrReturn = (strategy.equity / yearStartEquity - 1) * 100
+    array.push(years, lastYear)
+    array.push(returns, yrReturn)
+    array.push(drawdowns, yearMaxDD * 100)
+    yearStartEquity := strategy.equity
+    yearPeakEquity  := strategy.equity
+    yearMaxDD       := 0.0
+    lastYear        := curYear
+
+
+// ─────────────────────────────
+// MULTI-COLUMN TABLE WITH BLOCK SEPARATOR
+// ─────────────────────────────
+rowsPerCol = 15
+
+var table yt = table.new(position.middle_right, 12, rowsPerCol + 1,
+     frame_color=color.gray, frame_width=2, bgcolor=color.black)
+
+// total years INCLUDING current year
+totalYears = array.size(years) + 1
+
+// Headers
+for block = 0 to 2
+    baseCol = block * 4
+    table.cell(yt, baseCol,   0, "Year",   text_color=color.yellow)
+    table.cell(yt, baseCol+1, 0, "Return", text_color=color.yellow)
+    table.cell(yt, baseCol+2, 0, "MaxDD",  text_color=color.yellow)
+    table.cell(yt, baseCol+3, 0, "|",      text_color=color.gray)
+
+// Data
+col = 0
+row = 1
+
+for i = 0 to totalYears - 1
+
+    float r = na
+    float d = na
+    int y = na
+
+    // Completed years
+    if i < array.size(years)
+        y := array.get(years, i)
+        r := array.get(returns, i)
+        d := array.get(drawdowns, i)
+    else
+        // Current year (YTD)
+        y := curYear
+        r := (strategy.equity / yearStartEquity - 1) * 100
+        d := yearMaxDD * 100
+
+    baseCol = col * 4
+
+    table.cell(yt, baseCol,   row, str.tostring(y), text_color=color.white)
+    table.cell(yt, baseCol+1, row, str.tostring(r, "#.##") + "%",
+         text_color = r >= 0 ? color.lime : color.red)
+    table.cell(yt, baseCol+2, row, str.tostring(d, "#.##") + "%", text_color=color.white)
+    table.cell(yt, baseCol+3, row, "|", text_color=color.gray)
+
+    row += 1
+
+    if row > rowsPerCol
+        row := 1
+        col += 1
+        if col > 2
+            break
