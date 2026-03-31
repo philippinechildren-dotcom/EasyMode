@@ -14,22 +14,25 @@ curYear = year(time)
 var int lastYear = curYear
 
 var array<int>   years      = array.new_int()
-var array<float> returns   = array.new_float()
-var array<float> drawdowns = array.new_float()
+var array<float> returns    = array.new_float()
+var array<float> drawdowns  = array.new_float()
 
 var float yearStartEquity = strategy.equity
 var float yearPeakEquity  = strategy.equity
 var float yearMaxDD       = 0.0
 
+// Track peak + drawdown
 yearPeakEquity := math.max(yearPeakEquity, strategy.equity)
 dd = (yearPeakEquity - strategy.equity) / yearPeakEquity
 yearMaxDD := math.max(yearMaxDD, dd)
 
+// Detect new year
 if curYear != lastYear
     yrReturn = (strategy.equity / yearStartEquity - 1) * 100
     array.push(years, lastYear)
     array.push(returns, yrReturn)
     array.push(drawdowns, yearMaxDD * 100)
+
     yearStartEquity := strategy.equity
     yearPeakEquity  := strategy.equity
     yearMaxDD       := 0.0
@@ -41,53 +44,61 @@ if curYear != lastYear
 // ─────────────────────────────
 rowsPerCol = 15
 
+// 3 blocks × (Year, Return, MaxDD, separator) = 12 columns
 var table yt = table.new(position.middle_right, 12, rowsPerCol + 1,
      frame_color=color.gray, frame_width=2, bgcolor=color.black)
 
-// total years INCLUDING current year
-totalYears = array.size(years) + 1
 
-// Headers
-for block = 0 to 2
-    baseCol = block * 4
-    table.cell(yt, baseCol,   0, "Year",   text_color=color.yellow)
-    table.cell(yt, baseCol+1, 0, "Return", text_color=color.yellow)
-    table.cell(yt, baseCol+2, 0, "MaxDD",  text_color=color.yellow)
-    table.cell(yt, baseCol+3, 0, "|",      text_color=color.gray)
+// ─────────────────────────────
+// TABLE RENDER
+// ─────────────────────────────
+if barstate.islastconfirmedhistory or barstate.isrealtime
 
-// Data
-col = 0
-row = 1
+    // Clear previous contents (prevents visual bugs)
+    table.clear(yt, 0, 0, 11, rowsPerCol)
 
-for i = 0 to totalYears - 1
+    // Temporary arrays so we DON'T corrupt originals
+    tempYears     = array.copy(years)
+    tempReturns   = array.copy(returns)
+    tempDrawdowns = array.copy(drawdowns)
 
-    float r = na
-    float d = na
-    int y = na
+    // ✅ Add current (incomplete) year safely
+    currReturn = (strategy.equity / yearStartEquity - 1) * 100
+    array.push(tempYears, curYear)
+    array.push(tempReturns, currReturn)
+    array.push(tempDrawdowns, yearMaxDD * 100)
 
-    // Completed years
-    if i < array.size(years)
-        y := array.get(years, i)
-        r := array.get(returns, i)
-        d := array.get(drawdowns, i)
-    else
-        // Current year (YTD)
-        y := curYear
-        r := (strategy.equity / yearStartEquity - 1) * 100
-        d := yearMaxDD * 100
+    totalYears = array.size(tempYears)
 
-    baseCol = col * 4
+    // Headers
+    for block = 0 to 2
+        baseCol = block * 4
+        table.cell(yt, baseCol,   0, "Year",   text_color=color.yellow)
+        table.cell(yt, baseCol+1, 0, "Return", text_color=color.yellow)
+        table.cell(yt, baseCol+2, 0, "MaxDD",  text_color=color.yellow)
+        table.cell(yt, baseCol+3, 0, "|",      text_color=color.gray)
 
-    table.cell(yt, baseCol,   row, str.tostring(y), text_color=color.white)
-    table.cell(yt, baseCol+1, row, str.tostring(r, "#.##") + "%",
-         text_color = r >= 0 ? color.lime : color.red)
-    table.cell(yt, baseCol+2, row, str.tostring(d, "#.##") + "%", text_color=color.white)
-    table.cell(yt, baseCol+3, row, "|", text_color=color.gray)
+    col = 0
+    row = 1
 
-    row += 1
+    // Fill table
+    for i = 0 to totalYears - 1
+        y = array.get(tempYears, i)
+        r = array.get(tempReturns, i)
+        d = array.get(tempDrawdowns, i)
 
-    if row > rowsPerCol
-        row := 1
-        col += 1
-        if col > 2
-            break
+        baseCol = col * 4
+
+        table.cell(yt, baseCol,   row, str.tostring(y), text_color=color.white)
+        table.cell(yt, baseCol+1, row, str.tostring(r, "#.##") + "%",
+             text_color = r >= 0 ? color.lime : color.red)
+        table.cell(yt, baseCol+2, row, str.tostring(d, "#.##") + "%", text_color=color.white)
+        table.cell(yt, baseCol+3, row, "|", text_color=color.gray)
+
+        row += 1
+
+        if row > rowsPerCol
+            row := 1
+            col += 1
+            if col > 2
+                break
