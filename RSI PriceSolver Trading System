@@ -1,0 +1,61 @@
+//@version=6
+
+// ----------------------------------------------------------------
+// EasyMode Trading Series - RSI PriceSolver Trading System
+//
+// This is a complete working version of the EasyMode RSI PriceSolver Mean Reversion System.
+//
+// Designed for end-of-day trading on QQQ, QLD, and TQQQ using a very
+// simple, rules-based approach.
+//
+// The goal is to identify short-term weakness for entries and
+// strength for exits — using only the RSI indicator.
+//
+// The complete system — including full rules, performance data,
+// and variations — is explained in the EasyMode Trading book series.
+//
+// ⚠️ For end-of-day use only
+// ⚠️ Educational purposes only
+// ----------------------------------------------------------------
+
+strategy(
+    "RSI Single Threshold Strategy",
+    overlay=true,
+    pyramiding=0,
+    process_orders_on_close=true,
+    initial_capital=100000,
+    default_qty_type=strategy.percent_of_equity,
+    default_qty_value=100
+)
+
+// ─────────────────────────────
+// Inputs
+// ─────────────────────────────
+
+// RSI settings
+rsiLength = input.int(3, title="RSI Length", minval=1)
+
+// Single threshold for both entry & exit
+rsiThreshold = input.float(30, title="RSI Threshold (Buy < / Exit >)", minval=0, maxval=100)
+
+// ─────────────────────────────
+// RSI Calculation
+// ─────────────────────────────
+
+rsi = ta.rsi(close, rsiLength)
+
+// ─────────────────────────────
+// Trading Logic
+// ─────────────────────────────
+
+// Entry: RSI below threshold
+longEntry = rsi < rsiThreshold
+
+// Exit: RSI above threshold
+longExit = rsi > rsiThreshold
+
+if longEntry
+    strategy.entry("Long", strategy.long)
+
+if longExit
+    strategy.close("Long")
