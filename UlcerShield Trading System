@@ -1,0 +1,271 @@
+//@version=6
+
+// ----------------------------------------------------------------
+// EasyMode Trading Series - UlcerShield System
+//
+// This is a working version of the EasyMode UlcerShield System.
+//
+// Designed for end-of-day trading on QQQ, QLD, and TQQQ using a very
+// simple, rules-based approach.
+//
+// The goal is to identify short-term weakness for entries and
+// strength for exits — using only RSI indicators.
+//
+// The complete system — including full rules, performance data,
+// and variations — is explained in the EasyMode Trading book series.
+//
+// ⚠️ For end-of-day use only
+// ⚠️ Educational purposes only
+// ----------------------------------------------------------------
+
+strategy("EasyMode UlcerShield™ System",
+     overlay=true,
+     pyramiding=5,
+     process_orders_on_close=true,
+     initial_capital=100000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=20)
+
+// ─────────────────────────────
+// INPUTS
+// ─────────────────────────────
+rsiLen1 = input.int(2,  "RSI 1 Length")
+thresh1 = input.int(30, "RSI 1 Threshold")
+
+rsiLen2 = input.int(3,  "RSI 2 Length")
+thresh2 = input.int(30, "RSI 2 Threshold")
+
+rsiLen3 = input.int(5,  "RSI 3 Length")
+thresh3 = input.int(30, "RSI 3 Threshold")
+
+rsiLen4 = input.int(8,  "RSI 4 Length")
+thresh4 = input.int(30, "RSI 4 Threshold")
+
+rsiLen5 = input.int(13, "RSI 5 Length")
+thresh5 = input.int(34, "RSI 5 Threshold")
+
+// ─────────────────────────────
+// RSI LOGIC
+// ─────────────────────────────
+rsi1 = ta.rsi(close, rsiLen1)
+rsi2 = ta.rsi(close, rsiLen2)
+rsi3 = ta.rsi(close, rsiLen3)
+rsi4 = ta.rsi(close, rsiLen4)
+rsi5 = ta.rsi(close, rsiLen5)
+
+if ta.crossunder(rsi1, thresh1)
+    strategy.entry("RSI1", strategy.long)
+if ta.crossover(rsi1, thresh1)
+    strategy.close("RSI1")
+
+if ta.crossunder(rsi2, thresh2)
+    strategy.entry("RSI2", strategy.long)
+if ta.crossover(rsi2, thresh2)
+    strategy.close("RSI2")
+
+if ta.crossunder(rsi3, thresh3)
+    strategy.entry("RSI3", strategy.long)
+if ta.crossover(rsi3, thresh3)
+    strategy.close("RSI3")
+
+if ta.crossunder(rsi4, thresh4)
+    strategy.entry("RSI4", strategy.long)
+if ta.crossover(rsi4, thresh4)
+    strategy.close("RSI4")
+
+if ta.crossunder(rsi5, thresh5)
+    strategy.entry("RSI5", strategy.long)
+if ta.crossover(rsi5, thresh5)
+    strategy.close("RSI5")
+
+// ─────────────
+// METRICS PANEL
+// ─────────────
+
+// ─────────────────────────────
+// COLORS
+// ─────────────────────────────
+green  = color.rgb(120,255,120)
+red    = color.rgb(255,120,120)
+blue   = color.rgb(120,180,255)
+yellow = color.rgb(250, 250, 51)
+
+// ─────────────────────────────
+// START VALUES
+// ─────────────────────────────
+var float startEquity = na
+var int   startTime   = na
+
+if na(startEquity)
+    startEquity := strategy.equity
+if na(startTime)
+    startTime := time
+
+// ─────────────────────────────
+// TOTAL EQUITY METRICS
+// ─────────────────────────────
+var float peakEquity = na
+var float maxDD = 0.0
+var float ulcerSum = 0.0
+var int   ulcerCount = 0
+
+if na(peakEquity)
+    peakEquity := strategy.equity
+
+peakEquity := math.max(peakEquity, strategy.equity)
+ddPct = (peakEquity - strategy.equity) / peakEquity * 100
+maxDD := math.max(maxDD, ddPct / 100)
+
+ulcerSum += ddPct * ddPct
+ulcerCount += 1
+ulcerIndex = math.sqrt(ulcerSum / ulcerCount)
+
+// ─────────────────────────────
+// TIME METRICS
+// ─────────────────────────────
+var int totalBars = 0
+var int barsInMarket = 0
+totalBars += 1
+if strategy.position_size != 0
+    barsInMarket += 1
+
+timeInMarketPct = totalBars > 0 ? barsInMarket / totalBars * 100 : na
+
+// ─────────────────────────────
+// UPI
+// ─────────────────────────────
+years = (time - startTime) / (1000*60*60*24*365.25)
+cagr = years > 0 ? math.pow(strategy.equity/startEquity, 1/years)-1 : na
+upi = (not na(cagr) and ulcerIndex > 0) ? (cagr / ulcerIndex)*100 : na
+
+// ─────────────────────────────
+// CLOSED EQUITY METRICS
+// ─────────────────────────────
+closedEquity = startEquity + strategy.netprofit
+
+var float peakClosedEquity = na
+var float maxClosedDD = 0.0
+
+if na(peakClosedEquity)
+    peakClosedEquity := closedEquity
+
+justClosed = strategy.closedtrades > strategy.closedtrades[1]
+
+if justClosed
+    peakClosedEquity := math.max(peakClosedEquity, closedEquity)
+    closedDD = (peakClosedEquity - closedEquity) / peakClosedEquity
+    maxClosedDD := math.max(maxClosedDD, closedDD)
+
+// ─────────────────────────────
+// CAMPAIGN METRICS
+// ─────────────────────────────
+var bool  inCampaign = false
+var int   campaignBars = 0
+var int   campaignCount = 0
+var int   sumCampaignBars = 0
+var int   maxCampaignBars = 0
+
+var float campaignStartEquity = na
+var float sumCampaignReturnPct = 0.0
+
+var int   winningCampaigns = 0
+var int   losingCampaigns  = 0
+var float campaignWins     = 0.0
+var float campaignLosses   = 0.0
+
+// New variables for consecutive wins/losses
+var int consecutiveWins = 0
+var int maxConsecutiveWins = 0
+var int consecutiveLosses = 0
+var int maxConsecutiveLosses = 0
+
+if strategy.position_size != 0 and not inCampaign
+    inCampaign := true
+    campaignBars := 0
+    campaignStartEquity := closedEquity
+
+if strategy.position_size != 0
+    campaignBars += 1
+
+if strategy.position_size == 0 and inCampaign
+    campaignCount += 1
+    sumCampaignBars += campaignBars
+    maxCampaignBars := math.max(maxCampaignBars, campaignBars)
+
+    campaignReturnPct = (closedEquity - campaignStartEquity) / campaignStartEquity * 100
+    sumCampaignReturnPct += campaignReturnPct
+
+    if campaignReturnPct > 0
+        winningCampaigns += 1
+        campaignWins += campaignReturnPct
+        consecutiveWins += 1
+        consecutiveLosses := 0
+        maxConsecutiveWins := math.max(maxConsecutiveWins, consecutiveWins)
+    else
+        losingCampaigns += 1
+        campaignLosses += math.abs(campaignReturnPct)
+        consecutiveLosses += 1
+        consecutiveWins := 0
+        maxConsecutiveLosses := math.max(maxConsecutiveLosses, consecutiveLosses)
+
+    campaignBars := 0
+    inCampaign := false
+
+avgCampaignBars = campaignCount > 0 ? sumCampaignBars / campaignCount : na
+campaignExpectancy = campaignCount > 0 ? sumCampaignReturnPct / campaignCount : na
+campaignWinRate = campaignCount > 0 ? winningCampaigns / campaignCount : na
+campaignProfitFactor = campaignLosses > 0 ? campaignWins / campaignLosses : na
+
+var float campaignKelly = na
+if not na(campaignWinRate) and not na(campaignProfitFactor) and campaignProfitFactor > 0
+    campaignKelly := campaignWinRate - (1 - campaignWinRate) / campaignProfitFactor
+
+// ─────────────────────────────
+// TABLE
+// ─────────────────────────────
+var table t = table.new(position.top_right, 2, 16, frame_color=color.gray, frame_width=2, bgcolor=color.black)
+
+table.cell(t,0,0,"CAGR", text_color=blue)
+table.cell(t,1,0,not na(cagr)?str.tostring(cagr*100,"#.##")+"%":"-", text_color=blue)
+
+table.cell(t,0,1,"Max DD", text_color=red)
+table.cell(t,1,1,str.tostring(maxDD*100,"#.##")+"%", text_color=red)
+
+table.cell(t,0,2,"Ulcer Index", text_color=red)
+table.cell(t,1,2,str.tostring(ulcerIndex,"#.##"), text_color=red)
+
+table.cell(t,0,3,"UPI", text_color=yellow)
+table.cell(t,1,3,not na(upi)?str.tostring(upi,"#.##"):"-", text_color=yellow)
+
+table.cell(t,0,4,"Campaign Count", text_color=blue)
+table.cell(t,1,4,str.tostring(campaignCount), text_color=blue)
+
+table.cell(t,0,5,"Campaign Win %", text_color=green)
+table.cell(t,1,5,not na(campaignWinRate)?str.tostring(campaignWinRate*100,"#.##")+"%":"-", text_color=green)
+
+table.cell(t,0,6,"Max Campaign DD", text_color=red)
+table.cell(t,1,6,str.tostring(maxClosedDD*100,"#.##")+"%", text_color=red)
+
+table.cell(t,0,7,"Campaign Profit Factor", text_color=blue)
+table.cell(t,1,7,not na(campaignProfitFactor)?str.tostring(campaignProfitFactor,"#.##"):"-", text_color=blue)
+
+table.cell(t,0,8,"Campaign Expectancy", text_color=green)
+table.cell(t,1,8,not na(campaignExpectancy)?str.tostring(campaignExpectancy,"#.###")+"%":"-", text_color=green)
+
+table.cell(t,0,9,"Campaign Kelly", text_color=yellow)
+table.cell(t,1,9,not na(campaignKelly)?str.tostring(campaignKelly*100,"#.##")+"%":"-", text_color=yellow)
+
+table.cell(t,0,10,"Avg Campaign Bars", text_color=blue)
+table.cell(t,1,10,not na(avgCampaignBars)?str.tostring(avgCampaignBars,"#.##"):"-", text_color=blue)
+
+table.cell(t,0,11,"Max Campaign Bars", text_color=red)
+table.cell(t,1,11,str.tostring(maxCampaignBars), text_color=red)
+
+table.cell(t,0,12,"Time In Market", text_color=blue)
+table.cell(t,1,12,str.tostring(timeInMarketPct,"#.##")+"%", text_color=blue)
+
+table.cell(t,0,13,"Max Consecutive Wins", text_color=green)
+table.cell(t,1,13,str.tostring(maxConsecutiveWins), text_color=green)
+
+table.cell(t,0,14,"Max Consecutive Losses", text_color=red)
+table.cell(t,1,14,str.tostring(maxConsecutiveLosses), text_color=red)
