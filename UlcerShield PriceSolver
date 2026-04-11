@@ -1,0 +1,155 @@
+//@version=6
+indicator("UlcerShield™ PriceSolver™", overlay=true, max_lines_count=500, max_labels_count=500)
+
+// ----------------------------------------------------------------
+// EasyMode Trading Series - UlcerShield™ PriceSolver™
+//
+// This is a working version of the EasyMode UlcerShield™ PriceSolver™
+// designed for end-of-day trading on QQQ and leveraged QQQ.
+//
+// The goal is to highlight potential reversal areas using a
+// clean, rules-based approach without unnecessary complexity.
+//
+// The complete system — including full rules, performance data,
+// and implementation details — is explained in the EasyMode
+// Trading book series available on Amazon Kindle.
+//
+// ⚠️ For end-of-day use only (after market close)
+// ⚠️ Educational purposes only
+// ----------------------------------------------------------------
+
+// === Allocation Inputs ===
+accountBalance = input.float(38014, "Account Balance ($)", minval=0)
+allocationPct  = input.float(20, "Allocation % per Trade", minval=0, maxval=100)
+
+// === RSI Lengths and Targets ===
+rsiLength1 = input.int(2, "RSI 1 Length", minval=1)
+rsiTarget1 = input.float(29, "RSI 1 Target", minval=1, maxval=99)
+
+rsiLength2 = input.int(3, "RSI 2 Length", minval=1)
+rsiTarget2 = input.float(28, "RSI 2 Target", minval=1, maxval=99)
+
+rsiLength3 = input.int(5, "RSI 3 Length", minval=1)
+rsiTarget3 = input.float(28, "RSI 3 Target", minval=1, maxval=99)
+
+rsiLength4 = input.int(8, "RSI 4 Length", minval=1)
+rsiTarget4 = input.float(28, "RSI 4 Target", minval=1, maxval=99)
+
+rsiLength5 = input.int(13, "RSI 5 Length", minval=1)
+rsiTarget5 = input.float(33, "RSI 5 Target", minval=1, maxval=99)
+
+// === Colors ===
+greenCell   = color.new(color.rgb(0,128,0), 0)
+redCell     = color.new(color.rgb(230,0,0), 0)
+blueExact   = color.new(color.rgb(0,0,255), 0)
+blueHeader  = color.new(color.rgb(0,0,128), 0)
+orangeAlloc = color.new(color.rgb(255,165,0), 0)
+
+// === Persistent averages for each RSI ===
+var float avgGain1 = na
+var float avgLoss1 = na
+var float avgGain2 = na
+var float avgLoss2 = na
+var float avgGain3 = na
+var float avgLoss3 = na
+var float avgGain4 = na
+var float avgLoss4 = na
+var float avgGain5 = na
+var float avgLoss5 = na
+
+// === Persistent last green shares array ===
+var lastGreenShares = array.new_int(5, 0)  // start with 0
+
+// === Flattened RSI calculations for each RSI ===
+rsiLengths = array.from(rsiLength1, rsiLength2, rsiLength3, rsiLength4, rsiLength5)
+rsiTargets = array.from(rsiTarget1, rsiTarget2, rsiTarget3, rsiTarget4, rsiTarget5)
+avgGains   = array.from(avgGain1, avgGain2, avgGain3, avgGain4, avgGain5)
+avgLosses  = array.from(avgLoss1, avgLoss2, avgLoss3, avgLoss4, avgLoss5)
+projs      = array.new_float(5, 0)
+curRSIs    = array.new_float(5, 0)
+
+// Loop through each RSI
+for i = 0 to 4
+    length = array.get(rsiLengths, i)
+    target = array.get(rsiTargets, i)
+    avgG   = array.get(avgGains, i)
+    avgL   = array.get(avgLosses, i)
+
+    // Compute change
+    change = close - close[1]
+    gain   = math.max(change, 0)
+    loss   = math.max(-change, 0)
+
+    // Update averages
+    newAvgG = na(avgG) ? gain : (avgG * (length - 1) + gain) / length
+    newAvgL = na(avgL) ? loss : (avgL * (length - 1) + loss) / length
+
+    // Current RSI
+    curRSI = 100 * newAvgG / (newAvgG + newAvgL)
+
+    // Compute projected price
+    targetRS = target / (100 - target)
+    delta = 0.0
+    if target > curRSI
+        delta := targetRS * newAvgL * (length - 1) - newAvgG * (length - 1)
+    else
+        delta := newAvgL * (length - 1) - ((100 - target)/target) * newAvgG * (length - 1)
+
+    projTemp = close + delta
+
+    // Round projection
+    proj = curRSI > target ? math.floor(projTemp*100)/100 : math.ceil(projTemp*100)/100
+
+    // Store averages back
+    array.set(avgGains, i, newAvgG)
+    array.set(avgLosses, i, newAvgL)
+    array.set(projs, i, proj)
+    array.set(curRSIs, i, curRSI)
+
+// === Allocation $ ===
+allocationAmount = math.round(accountBalance * allocationPct / 100)
+
+// === Create table ===
+var table rsiTable = table.new(position.bottom_right, 3, 6, border_width=1)
+
+// Fill headers once
+if barstate.isfirst
+    table.cell(rsiTable, 0, 0, "Signal", text_color=color.white, bgcolor=blueHeader)
+    table.cell(rsiTable, 1, 0, "Next Close", text_color=color.white, bgcolor=blueHeader)
+    table.cell(rsiTable, 2, 0, "Shares", text_color=color.white, bgcolor=blueHeader)
+
+// Fill table values
+for i = 0 to 4
+    curRSI = array.get(curRSIs, i)
+    proj   = array.get(projs, i)
+    target = array.get(rsiTargets, i)
+
+    cellColor = curRSI > target ? greenCell : curRSI < target ? redCell : blueExact
+    sharesCalc = math.floor(allocationAmount / proj)
+
+    // Only update last green shares
+    if curRSI > target
+        array.set(lastGreenShares, i, sharesCalc)
+
+    // Use last green value even if current signal is red
+    storedShares = array.get(lastGreenShares, i)
+    sharesText = str.tostring(storedShares)
+
+    // Dynamic bottom-left text: "Buy"/"Exit"
+    cellText = curRSI > target ? "Buy" : curRSI < target ? "Exit" : "Neutral"
+
+    table.cell(rsiTable, 0, i+1, cellText, text_color=color.white, bgcolor=blueHeader)
+    table.cell(rsiTable, 1, i+1, str.tostring(proj), text_color=color.white, bgcolor=cellColor)
+    table.cell(rsiTable, 2, i+1, sharesText, text_color=color.white, bgcolor=orangeAlloc)
+
+// === Save updated averages back to persistent variables ===
+avgGain1 := array.get(avgGains, 0)
+avgLoss1 := array.get(avgLosses, 0)
+avgGain2 := array.get(avgGains, 1)
+avgLoss2 := array.get(avgLosses, 1)
+avgGain3 := array.get(avgGains, 2)
+avgLoss3 := array.get(avgLosses, 2)
+avgGain4 := array.get(avgGains, 3)
+avgLoss4 := array.get(avgLosses, 3)
+avgGain5 := array.get(avgGains, 4)
+avgLoss5 := array.get(avgLosses, 4)
