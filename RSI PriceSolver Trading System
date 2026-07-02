@@ -20,7 +20,7 @@
 // This repository contains the complete open-source implementation
 // of the PriceSolver calculation.
 //
-// You're welcome to calculate tomorrow's execution price yourself.
+// You're welcome to watch the closing price yourself each trading day.
 //
 // If you'd rather skip the daily calculations, tomorrow's ready-to-use
 // PriceSolver execution prices and current system signals for all
