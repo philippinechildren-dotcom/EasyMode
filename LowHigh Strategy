@@ -19,6 +19,22 @@ strategy("EasyMode LowHigh™", overlay=true,
 // The complete system — including full rules, performance data,
 // and variations — is explained in the EasyMode Trading™ book series.
 //
+// ----------------------------------------------------------------
+// EasyMode Trading Resources
+//
+// This system is completely open source and can be used directly
+// from this script.
+//
+// For traders using multiple EasyMode systems, the PriceSolver Daily
+// Report at UlcerShield.com provides a single daily report containing
+// PriceSolver execution levels, current system signals, and market
+// updates across the EasyMode Trading ecosystem.
+//
+// https://ulcershield.com
+//
+// Transparent systems. Ready-to-use execution.
+// ----------------------------------------------------------------
+//
 // ⚠️ For end-of-day use only
 // ⚠️ Educational purposes only
 // ----------------------------------------------------------------
