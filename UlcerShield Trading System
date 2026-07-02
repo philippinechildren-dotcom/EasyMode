@@ -1,18 +1,40 @@
 //@version=6
 
 // ----------------------------------------------------------------
-// EasyMode Trading Series - UlcerShield System
+// EasyMode Trading Series - UlcerShield™ System
 //
-// This is a working version of the EasyMode UlcerShield System.
+// This is a complete working version of the EasyMode UlcerShield™ System.
 //
-// Designed for end-of-day trading on QQQ, QLD, and TQQQ using a very
-// simple, rules-based approach.
+// Designed for end-of-day trading on QQQ, QLD, and TQQQ using a simple,
+// rules-based approach.
 //
-// The goal is to identify short-term weakness for entries and
-// strength for exits — using only RSI indicators.
+// The system combines five independent RSI Threshold strategies into a
+// single portfolio, allowing multiple positions to work together to
+// reduce drawdowns while maintaining long-term growth.
 //
-// The complete system — including full rules, performance data,
-// and variations — is explained in the EasyMode Trading book series.
+// The complete system—including full rules, performance data, and
+// portfolio construction—is explained in the EasyMode Trading™ book series.
+//
+// ----------------------------------------------------------------
+// UlcerShield Daily Report
+//
+// This repository contains the complete open-source implementation of
+// the UlcerShield™ System.
+//
+// You're welcome to monitor each RSI Threshold strategy and determine
+// the daily portfolio signals yourself.
+//
+// If you'd rather skip checking multiple systems every market close, the
+// UlcerShield Daily Report publishes the current Buy/Sell signals for
+// every supported ETF before each trading day, along with the latest
+// PriceSolver execution levels where applicable.
+//
+// Available at:
+//
+// https://ulcershield.com
+//
+// Transparent systems. Ready-to-use execution.
+// ----------------------------------------------------------------
 //
 // ⚠️ For end-of-day use only
 // ⚠️ Educational purposes only
