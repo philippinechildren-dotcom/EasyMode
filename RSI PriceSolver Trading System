@@ -14,6 +14,24 @@
 // The complete system — including full rules, performance data,
 // and variations — is explained in the EasyMode Trading book series.
 //
+// ----------------------------------------------------------------
+// PriceSolver Daily Report
+//
+// This repository contains the complete open-source implementation
+// of the PriceSolver calculation.
+//
+// You're welcome to calculate tomorrow's execution price yourself.
+//
+// If you'd rather skip the daily calculations, tomorrow's ready-to-use
+// PriceSolver execution prices and current system signals for all
+// supported ETFs are published before each trading day in the
+// PriceSolver Daily Report at:
+//
+// https://ulcershield.com
+//
+// Transparent system. Ready-to-use execution.
+// ----------------------------------------------------------------
+//
 // ⚠️ For end-of-day use only
 // ⚠️ Educational purposes only
 // ----------------------------------------------------------------
